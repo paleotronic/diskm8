@@ -173,3 +173,7 @@ Find Duplicate files across disks:
 Find Active Sector duplicates but only under a folder:
 
 ```diskm8 -as-dupes -select "C:\Users\myname\LotsOfDisks\Operating Systems"```
+
+### Putting a file onto a disk in a particular path
+
+```diskm8 -with-disk prodos_basic.dsk -with-path practice -file-put start#0x0801.BAS```
