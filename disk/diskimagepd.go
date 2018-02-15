@@ -1510,7 +1510,7 @@ func (dsk *DSKWrapper) PRODOSWriteFile(path string, name string, kind ProDOSFile
 
 	fd.Publish(dsk)
 
-	dvdh.SetFileCount(vdh.GetFileCount() + 1)
+	dvdh.SetFileCount(dvdh.GetFileCount() + 1)
 	dvdh.Publish(dsk)
 
 	err = dsk.PRODOSMarkBlocks(freeBlocks, false)
@@ -1573,8 +1573,8 @@ func (dsk *DSKWrapper) PRODOSWriteSaplingBlocks(indexBlock int, dataBlocks []int
 	ib := make([]byte, 512)
 	for i, blocknum := range dataBlocks {
 		// index the block
-		ib[i*2+0] = byte(blocknum & 0xff)
-		ib[i*2+1] = byte(blocknum / 0x100)
+		ib[0+i] = byte(blocknum & 0xff)
+		ib[256+i] = byte(blocknum / 0x100)
 
 		// data offset...
 		ptr := 512 * i
