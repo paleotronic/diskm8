@@ -31,7 +31,7 @@ const MAXVOL = 8
 var commandList map[string]*shellCommand
 var commandVolumes [MAXVOL]*disk.DSKWrapper
 var commandTarget int = -1
-var commandPath string
+var commandPath [MAXVOL]string
 
 func mountDsk(dsk *disk.DSKWrapper) (int, error) {
 
@@ -98,7 +98,7 @@ func smartSplit(line string) (string, []string) {
 	return out[0], out[1:]
 }
 
-func getPrompt(wp string, t int) string {
+func getPrompt(wp [MAXVOL]string, t int) string {
 
 	if t == -1 || commandVolumes[t] == nil {
 		return fmt.Sprintf("dsk:%d:%s:%s> ", 0, "<no mount>", wp)
@@ -107,7 +107,7 @@ func getPrompt(wp string, t int) string {
 	dsk := commandVolumes[t]
 
 	if dsk != nil {
-		return fmt.Sprintf("dsk:%d:%s:%s> ", t, filepath.Base(dsk.Filename), wp)
+		return fmt.Sprintf("dsk:%d:%s:%s> ", t, filepath.Base(dsk.Filename), wp[t])
 	}
 	return "dsk> "
 }
@@ -341,6 +341,20 @@ func init() {
 			NeedsMount:  false,
 			Context:     sccNone,
 		},
+		"prefix": &shellCommand{
+			Name:        "prefix",
+			Description: "Change volume path",
+			MinArgs:     0,
+			MaxArgs:     1,
+			Code:        shellPath,
+			NeedsMount:  true,
+			Context:     sccDiskFile,
+			Text: []string{
+				"prefix [<path>]",
+				"",
+				"Change disk working directory.",
+			},
+		},
 		"cat": &shellCommand{
 			Name:        "cat",
 			Description: "Display file information",
@@ -371,14 +385,14 @@ func init() {
 		},
 		"put": &shellCommand{
 			Name:        "put",
-			Description: "Copy local file to disk",
+			Description: "Copy local file to disk (with optional target dir)",
 			MinArgs:     1,
-			MaxArgs:     1,
+			MaxArgs:     2,
 			Code:        shellPut,
 			NeedsMount:  true,
 			Context:     sccLocal,
 			Text: []string{
-				"put <local file>",
+				"put <local file> [<target dir>]",
 				"",
 				"Write local file to current disk",
 			},
@@ -643,7 +657,7 @@ func shellProcess(line string) int {
 func shellDo(dsk *disk.DSKWrapper) {
 
 	//commandVolumes = dsk
-	commandPath := ""
+	//commandPath[commandTarget] := ""
 
 	ac := &shellCompleter{}
 
@@ -676,6 +690,31 @@ func shellDo(dsk *disk.DSKWrapper) {
 
 		rl.SetPrompt(getPrompt(commandPath, commandTarget))
 	}
+
+}
+
+func shellPath(args []string) int {
+	path := ""
+	if len(args) > 0 {
+		path = args[0]
+	}
+
+	if formatIn(commandVolumes[commandTarget].Format.ID, []disk.DiskFormatID{disk.DF_PRODOS, disk.DF_PRODOS_800KB, disk.DF_PRODOS_400KB, disk.DF_PRODOS_CUSTOM}) {
+		_, _, _, e := commandVolumes[commandTarget].PRODOSFindDirBlocks(2, path)
+		if e == nil {
+			commandPath[commandTarget] = path
+			if path == "" {
+				path = "/"
+			}
+			fmt.Printf("Switched to directory %s\r\n", path)
+		} else {
+			fmt.Println("No such directory")
+		}
+	} else {
+		fmt.Println("Not supported on this filesystem")
+	}
+
+	return 0
 
 }
 
@@ -714,7 +753,7 @@ func shellUnmount(args []string) int {
 	if commandVolumes[commandTarget] != nil {
 
 		commandVolumes[commandTarget] = nil
-		commandPath = ""
+		commandPath[commandTarget] = ""
 
 		os.Stderr.WriteString("Unmounted volume\n")
 
@@ -1098,7 +1137,7 @@ func shellPut(args []string) int {
 			os.Stderr.WriteString("WARNING: Integer retokenization from text is experimental\n")
 		}
 
-		e := commandVolumes[commandTarget].PRODOSWriteFile(commandPath, name, kind, data, int(addr))
+		e := commandVolumes[commandTarget].PRODOSWriteFile(commandPath[commandTarget], name, kind, data, int(addr))
 		if e != nil {
 			os.Stderr.WriteString("Failed to create file: " + e.Error())
 			return -1
@@ -1133,12 +1172,14 @@ func shellDelete(args []string) int {
 
 	} else if formatIn(commandVolumes[commandTarget].Format.ID, []disk.DiskFormatID{disk.DF_PRODOS, disk.DF_PRODOS_800KB, disk.DF_PRODOS_400KB, disk.DF_PRODOS_CUSTOM}) {
 
+		path := commandPath[commandTarget]
+
 		if strings.Contains(args[0], "/") {
-			commandPath = filepath.Dir(args[0])
+			path = filepath.Dir(args[0])
 			args[0] = filepath.Base(args[0])
 		}
 
-		err = commandVolumes[commandTarget].PRODOSDeleteFile(commandPath, args[0])
+		err = commandVolumes[commandTarget].PRODOSDeleteFile(path, args[0])
 		if err != nil {
 			os.Stderr.WriteString(err.Error())
 			return -1
@@ -1208,12 +1249,14 @@ func shellLock(args []string) int {
 
 	} else if formatIn(commandVolumes[commandTarget].Format.ID, []disk.DiskFormatID{disk.DF_PRODOS, disk.DF_PRODOS_800KB, disk.DF_PRODOS_400KB, disk.DF_PRODOS_CUSTOM}) {
 
+		path := commandPath[commandTarget]
+
 		if strings.Contains(args[0], "/") {
-			commandPath = filepath.Dir(args[0])
+			path = filepath.Dir(args[0])
 			args[0] = filepath.Base(args[0])
 		}
 
-		err = commandVolumes[commandTarget].PRODOSSetLocked(commandPath, args[0], true)
+		err = commandVolumes[commandTarget].PRODOSSetLocked(path, args[0], true)
 		if err != nil {
 			os.Stderr.WriteString(err.Error())
 			return -1
@@ -1246,12 +1289,14 @@ func shellUnlock(args []string) int {
 
 	} else if formatIn(commandVolumes[commandTarget].Format.ID, []disk.DiskFormatID{disk.DF_PRODOS, disk.DF_PRODOS_800KB, disk.DF_PRODOS_400KB, disk.DF_PRODOS_CUSTOM}) {
 
+		path := commandPath[commandTarget]
+
 		if strings.Contains(args[0], "/") {
-			commandPath = filepath.Dir(args[0])
+			path = filepath.Dir(args[0])
 			args[0] = filepath.Base(args[0])
 		}
 
-		err = commandVolumes[commandTarget].PRODOSSetLocked(commandPath, args[0], false)
+		err = commandVolumes[commandTarget].PRODOSSetLocked(path, args[0], false)
 		if err != nil {
 			os.Stderr.WriteString(err.Error())
 			return -1
