@@ -94,6 +94,7 @@ var adornedCP = flag.Bool("adorned", true, "Extract files named similar to CP")
 var shell = flag.Bool("shell", false, "Start interactive mode")
 var shellBatch = flag.String("shell-batch", "", "Execute shell command(s) from file and exit")
 var withDisk = flag.String("with-disk", "", "Perform disk operation (-file-extract,-file-put,-file-delete)")
+var withPath = flag.String("with-path", "", "Target path for disk operation (-file-extract,-file-put,-file-delete)")
 var fileExtract = flag.String("file-extract", "", "File to delete from disk (-with-disk)")
 var filePut = flag.String("file-put", "", "File to put on disk (-with-disk)")
 var fileDelete = flag.String("file-delete", "", "File to delete (-with-disk)")
@@ -130,6 +131,11 @@ func main() {
 		}
 		commandVolumes[0] = dsk
 		commandTarget = 0
+
+		if *withPath != "" {
+			shellProcess("prefix " + *withPath)
+		}
+
 		switch {
 		case *fileExtract != "":
 			shellProcess("extract " + *fileExtract)
