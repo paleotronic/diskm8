@@ -566,27 +566,43 @@ func ApplesoftTokenize(lines []string) []byte {
 		linebuffer[0x03] = byte(ln / 0x100)
 
 		// PROCESS LINE
+		var lastKeyword string
 		for _, ch := range rest {
 
 			switch {
 			case inqq && ch != '"':
 				linebuffer = append(linebuffer, byte(ch))
+				lastKeyword = ""
 				continue
 			case ch == '"':
 				linebuffer = append(linebuffer, byte(ch))
+				lastKeyword = ""
 				inqq = !inqq
 				continue
 			case !inqq && breakingChar(ch):
 				linebuffer = append(linebuffer, []byte(chunk)...)
 				chunk = ""
 				linebuffer = append(linebuffer, byte(ch))
+				lastKeyword = ""
 				continue
 			}
 
 			chunk += string(ch)
+
+			if lastKeyword != "" {
+				code, ok := ApplesoftReverse[strings.ToUpper(lastKeyword+chunk)]
+				if ok {
+					linebuffer[len(linebuffer)-1] = byte(code)
+					lastKeyword = lastKeyword + chunk
+					chunk = ""
+					continue
+				}
+			}
+
 			code, ok := ApplesoftReverse[strings.ToUpper(chunk)]
 			if ok {
 				linebuffer = append(linebuffer, byte(code))
+				lastKeyword = chunk
 				chunk = ""
 			}
 		}
