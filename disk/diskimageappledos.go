@@ -205,8 +205,10 @@ func (fd *FileDescriptor) TotalSectors() int {
 }
 
 func (fd *FileDescriptor) SetTotalSectors(v int) {
+	fmt.Printf("Call to set sector count to %d\n", v)
 	fd.Data[0x21] = byte(v & 0xff)
 	fd.Data[0x22] = byte(v / 0x100)
+	fmt.Printf("Sector count bytes are %d, %d\n", fd.Data[0x21], fd.Data[0x22])
 }
 
 func (fd *FileDescriptor) SetTrackSectorListStart(t, s int) {
@@ -901,6 +903,15 @@ func (dsk *DSKWrapper) AppleDOSWriteFile(name string, kind FileType, data []byte
 		return err
 	}
 
+	fmt.Printf("Writing file with type %s\n", kind.Ext())
+
+	if kind == FileTypeBIN {
+		l := len(data)
+		fmt.Printf("Length is %d\n", l)
+		header := []byte{byte(l % 256), byte(l / 256)}
+		data = append(header, data...)
+	}
+
 	if kind != FileTypeTXT {
 		header := []byte{byte(loadAddr % 256), byte(loadAddr / 256)}
 		data = append(header, data...)
@@ -932,6 +943,7 @@ func (dsk *DSKWrapper) AppleDOSWriteFile(name string, kind FileType, data []byte
 	}
 
 	// 2nd: check we can get a free catalog entry
+	sectorCount := len(dataBlocks)
 
 	// 3rd: Write the datablocks
 	var block int = 0
@@ -1010,7 +1022,8 @@ func (dsk *DSKWrapper) AppleDOSWriteFile(name string, kind FileType, data []byte
 	fd.SetName(name)
 	fd.SetTrackSectorListStart(tsBlocks[0][0], tsBlocks[0][1])
 	fd.SetType(kind)
-	fd.SetTotalSectors(len(dataBlocks))
+	fd.SetTotalSectors(sectorCount)
+	fd.Publish(dsk)
 
 	return nil
 

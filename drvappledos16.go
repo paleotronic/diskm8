@@ -136,11 +136,11 @@ func analyzeDOS16(id int, dsk *disk.DSKWrapper, info *Disk) {
 		}
 
 		//l.Log("start read")
-		_, _, data, err := dsk.AppleDOSReadFileRaw(fd)
+		size, addr, data, err := dsk.AppleDOSReadFileRaw(fd)
 		if err == nil {
 			sum := sha256.Sum256(data)
 			file.SHA256 = hex.EncodeToString(sum[:])
-			file.Size = len(data)
+			file.Size = size
 			if *ingestMode&1 == 1 {
 				if fd.Type() == disk.FileTypeAPP {
 					file.Text = disk.ApplesoftDetoks(data)
@@ -158,8 +158,8 @@ func analyzeDOS16(id int, dsk *disk.DSKWrapper, info *Disk) {
 					file.TypeCode = TypeMask_AppleDOS | TypeCode(fd.Type())
 					file.LoadAddress = 0x0000
 				} else if fd.Type() == disk.FileTypeBIN && len(data) >= 2 {
-					file.LoadAddress = int(data[0]) + 256*int(data[1])
-					file.Data = data[2:]
+					file.LoadAddress = addr
+					file.Data = data
 					file.TypeCode = TypeMask_AppleDOS | TypeCode(fd.Type())
 				} else {
 					file.LoadAddress = 0x0000

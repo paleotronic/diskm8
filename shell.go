@@ -1060,15 +1060,42 @@ func shellPut(args []string) int {
 		return 1
 	}
 
-	data, err := ioutil.ReadFile(args[0])
+	parts := strings.Split(args[0], ",")
+
+	data, err := ioutil.ReadFile(parts[0])
 	if err != nil {
 		return -1
 	}
 
+	addr := int64(0x0801)
+	name := filepath.Base(args[0])
+	reTrailAddr := regexp.MustCompile("(?i)^([^,]+)([,]A(([$]|0x)[0-9a-f]+))?([,]L(([$]|0x)[0-9a-f]+))?$")
+	if reTrailAddr.MatchString(name) {
+		m := reTrailAddr.FindAllStringSubmatch(name, -1)
+		name = m[0][1]
+		saddr := m[0][3]
+		slen := m[0][6]
+		if saddr != "" {
+			if strings.HasPrefix(saddr, "$") {
+				saddr = "0x" + saddr[1:]
+			}
+			addr, _ = strconv.ParseInt(saddr, 0, 32)
+		}
+		if slen != "" {
+			if strings.HasPrefix(slen, "$") {
+				slen = "0x" + slen[1:]
+			}
+			nlen, _ := strconv.ParseInt(slen, 0, 32)
+			if int(nlen) < len(data) {
+				data = data[:int(nlen)]
+			}
+		}
+	}
+
 	if formatIn(commandVolumes[commandTarget].Format.ID, []disk.DiskFormatID{disk.DF_DOS_SECTORS_13, disk.DF_DOS_SECTORS_16}) {
-		addr := int64(0x0801)
-		name := filepath.Base(args[0])
+
 		kind := disk.FileTypeAPP
+
 		reSpecial := regexp.MustCompile("(?i)^(.+)[#](0x[a-fA-F0-9]+)[.]([A-Za-z]+)$")
 		ext := strings.Trim(filepath.Ext(name), ".")
 		if reSpecial.MatchString(name) {
@@ -1106,8 +1133,7 @@ func shellPut(args []string) int {
 		saveDisk(commandVolumes[commandTarget], fullpath)
 
 	} else if formatIn(commandVolumes[commandTarget].Format.ID, []disk.DiskFormatID{disk.DF_PRODOS, disk.DF_PRODOS_800KB, disk.DF_PRODOS_400KB, disk.DF_PRODOS_CUSTOM}) {
-		addr := int64(0x0801)
-		name := filepath.Base(args[0])
+
 		ext := strings.Trim(filepath.Ext(name), ".")
 		reSpecial := regexp.MustCompile("(?i)^(.+)[#](0x[a-fA-F0-9]+)[.]([A-Za-z]+)$")
 		if reSpecial.MatchString(name) {
