@@ -1105,7 +1105,9 @@ func shellPut(args []string) int {
 			addrStr := m[0][2]
 			addr, _ = strconv.ParseInt(addrStr, 0, 32)
 		} else {
-			name = strings.Replace(name, "."+ext, "", -1)
+			//name = strings.Replace(name, "."+ext, "", -1)
+			l := len(ext) + 1
+			name = name[:len(name)-l]
 		}
 
 		kind = disk.AppleDOSFileTypeFromExt(ext)
@@ -1143,10 +1145,17 @@ func shellPut(args []string) int {
 			addrStr := m[0][2]
 			addr, _ = strconv.ParseInt(addrStr, 0, 32)
 		} else {
-			name = strings.Replace(name, "."+ext, "", -1)
+			l := len(ext) + 1
+			name = name[:len(name)-l]
 		}
 
 		kind := disk.ProDOSFileTypeFromExt(ext)
+
+		if strings.ToLower(ext) == "system" {
+			name += "." + ext
+			ext = ""
+			kind = disk.ProDOSFileTypeFromExt("SYS")
+		}
 
 		if strings.HasSuffix(args[0], ".INT.ASC") {
 			kind = disk.FileType_PD_INT
