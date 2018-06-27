@@ -2,7 +2,6 @@ package disk
 
 import (
 	"errors"
-	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -193,9 +192,9 @@ func (fd *VDH) Publish(dsk *DSKWrapper) error {
 	for i, v := range fd.Data {
 		bd[fd.blockoffset+i] = v
 	}
-	fmt.Printf("Writing dir header at block %d\n", fd.blockid)
+	//fmt.Printf("Writing dir header at block %d\n", fd.blockid)
 
-	fmt.Printf("Data=%v\n", bd)
+	//fmt.Printf("Data=%v\n", bd)
 
 	return dsk.PRODOSWrite(fd.blockid, bd)
 }
@@ -324,6 +323,9 @@ func (vb ProDOSVolumeBitmap) IsBlockFree(b int) bool {
 }
 
 func (vb ProDOSVolumeBitmap) SetBlockFree(b int, free bool) {
+
+	//log.Printf("Freeing block %d", b)
+
 	bidx := b / 8
 	bit := 7 - (b % 8)
 	setmask := byte(1 << uint(bit))
@@ -1390,10 +1392,16 @@ func (dsk *DSKWrapper) PRODOSDeleteFile(path string, name string) error {
 			return err
 		}
 
+		maxBlocks := 1600
+		if len(dsk.Data) == STD_DISK_BYTES {
+			maxBlocks = 280
+		}
+
 		i := 0
-		b := int(ib[2*i+0]) + 256*int(ib[2*i+1])
-		for i < 256 && b != 0 {
-			b = int(ib[2*i+0]) + 256*int(ib[2*i+1])
+		b := int(ib[i]) + 256*int(ib[256+i])
+		for i < 256 && b != 0 && b <= maxBlocks {
+			removeBlocks = append(removeBlocks, b)
+			b = int(ib[i]) + 256*int(ib[256+i])
 			i++
 		}
 	}
