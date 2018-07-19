@@ -262,6 +262,20 @@ func init() {
 				"Mounts disk and switches to the new slot",
 			},
 		},
+		"setvolume": &shellCommand{
+			Name:        "setvolume",
+			Description: "Sets the ProDOS volume name",
+			MinArgs:     1,
+			MaxArgs:     1,
+			Code:        shellVolumeName,
+			NeedsMount:  true,
+			Context:     sccNone,
+			Text: []string{
+				"setvolume <volume name>",
+				"",
+				"Set ProDOS volume name.  Truncated to 15 chars if too long.",
+			},
+		},
 		"unmount": &shellCommand{
 			Name:        "unmount",
 			Description: "unmount disk image",
@@ -820,10 +834,15 @@ func shellCat(args []string) int {
 	}
 
 	bs := 256
+	volumename := "no-name"
 	if info.FormatID.ID == disk.DF_PASCAL || info.FormatID.ID == disk.DF_PRODOS ||
 		info.FormatID.ID == disk.DF_PRODOS_800KB || info.FormatID.ID == disk.DF_PRODOS_400KB ||
 		info.FormatID.ID == disk.DF_PRODOS_CUSTOM {
 		bs = 512
+		vdh, err := commandVolumes[commandTarget].PRODOSGetVDH(2)
+		if err == nil {
+			volumename = vdh.GetVolumeName()
+		}
 	}
 
 	pattern := "*"
@@ -832,6 +851,8 @@ func shellCat(args []string) int {
 	}
 
 	files, _ := globDisk(commandTarget, pattern)
+
+	fmt.Printf("Volume Name is %s\n\n", volumename)
 
 	fmt.Printf("%-33s  %6s  %2s  %-23s  %s\n", "NAME", "BLOCKS", "RO", "KIND", "ADDITONAL")
 	for _, f := range files {
@@ -1035,6 +1056,36 @@ func shellMkdir(args []string) int {
 		saveDisk(commandVolumes[commandTarget], fullpath)
 	} else {
 		fmt.Println("Do not support Mkdir on " + commandVolumes[commandTarget].Format.String() + " currently.")
+		return 0
+	}
+
+	return 0
+
+}
+
+func shellVolumeName(args []string) int {
+
+	fullpath, _ := filepath.Abs(commandVolumes[commandTarget].Filename)
+
+	_, err := analyze(0, fullpath)
+	if err != nil {
+		return 1
+	}
+
+	name := strings.ToUpper(args[0])
+
+	if formatIn(commandVolumes[commandTarget].Format.ID, []disk.DiskFormatID{disk.DF_PRODOS, disk.DF_PRODOS_800KB, disk.DF_PRODOS_400KB, disk.DF_PRODOS_CUSTOM}) {
+		vdh, err := commandVolumes[commandTarget].PRODOSGetVDH(2)
+		if err != nil {
+			fmt.Printf("Failed to get Volume Directory Header: %v\n", err)
+			return -1
+		}
+		vdh.SetVolumeName(name)
+		commandVolumes[commandTarget].PRODOSSetVDH(2, vdh)
+		fmt.Printf("Volume name is now %s\n", vdh.GetVolumeName())
+		saveDisk(commandVolumes[commandTarget], fullpath)
+	} else {
+		fmt.Println("Do not support setvolume on " + commandVolumes[commandTarget].Format.String() + ".")
 		return 0
 	}
 

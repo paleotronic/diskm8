@@ -74,12 +74,31 @@ func (fd *VDH) GetNameLength() int {
 	return int(fd.Data[0] & 0xf)
 }
 
+func (fd *VDH) SetNameLength(l int) {
+	fd.Data[0] = (fd.Data[0] & 0xf0) | byte(l&0x0f)
+}
+
 func (fd *VDH) GetStorageType() ProDOSStorageType {
 	return ProDOSStorageType((fd.Data[0]) >> 4)
 }
 
 func (fd *VDH) GetDirName() string {
 	return fd.GetVolumeName()
+}
+
+func (fd *VDH) SetVolumeName(s string) {
+	if len(s) > 15 {
+		s = s[:15]
+	}
+	l := len(s)
+	for i := 0; i < 15; i++ {
+		if i < l {
+			fd.Data[1+i] = byte(s[i])
+		} else {
+			fd.Data[1+i] = 0x00
+		}
+	}
+	fd.SetNameLength(l)
 }
 
 func (fd *VDH) GetVolumeName() string {
@@ -881,6 +900,20 @@ func (d *DSKWrapper) PRODOSGetVDH(b int) (*VDH, error) {
 	vdh.SetData(data[4:43], b, 4)
 	return vdh, nil
 
+}
+
+func (d *DSKWrapper) PRODOSSetVDH(b int, vdh *VDH) error {
+
+	data, e := d.PRODOSGetBlock(b)
+	if e != nil {
+		return e
+	}
+
+	for i, v := range vdh.Data {
+		data[4+i] = v
+	}
+
+	return d.PRODOSWrite(b, data)
 }
 
 func (d *DSKWrapper) PRODOSGetCatalogPathed(start int, path string, pattern string) (*VDH, []ProDOSFileDescriptor, error) {
