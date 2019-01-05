@@ -917,20 +917,19 @@ func (dsk *DSKWrapper) AppleDOSWriteFile(name string, kind FileType, data []byte
 		data = append(header, data...)
 	}
 
-	// 1st: check we have sufficient space...
-	tsBlocks, dataBlocks, err := dsk.AppleDOSGetFreeSectors(len(data))
-	if err != nil {
-		return err
-	}
-
+	// try get catalog entry - delete existing if match found
 	fd, err := dsk.AppleDOSNamedCatalogEntry(name)
-	//fmt.Println("FD=", fd)
 	if err == nil {
 		if kind != fd.Type() {
 			return errors.New("File type mismatch")
 		} else {
 			// need to delete this file...
-			err = dsk.AppleDOSDeleteFile(name)
+			err = dsk.AppleDOSRemoveFile(fd)
+			if err != nil {
+				return err
+			}
+			// reread vtoc here
+			vtoc, err = dsk.AppleDOSGetVTOC()
 			if err != nil {
 				return err
 			}
@@ -940,6 +939,12 @@ func (dsk *DSKWrapper) AppleDOSWriteFile(name string, kind FileType, data []byte
 		if err != nil {
 			return err
 		}
+	}
+
+	// 1st: check we have sufficient space...
+	tsBlocks, dataBlocks, err := dsk.AppleDOSGetFreeSectors(len(data))
+	if err != nil {
+		return err
 	}
 
 	// 2nd: check we can get a free catalog entry
@@ -1057,6 +1062,8 @@ func (d *DSKWrapper) AppleDOSRemoveFile(fd *FileDescriptor) error {
 	for _, pair := range tsBlocks {
 		vtoc.SetTSFree(pair[0], pair[1], true)
 	}
+
+	vtoc.Publish(d)
 
 	fd.Data[0x00] = 0xff
 	fd.SetName("")

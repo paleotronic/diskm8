@@ -13,25 +13,19 @@ through as time goes by.
 */
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"runtime/debug"
-
-	"flag"
-
-	"os"
+	"strings"
+	"time"
 
 	"github.com/paleotronic/diskm8/disk"
 	"github.com/paleotronic/diskm8/loggy"
-
-	"runtime"
-
-	"strings"
-
-	"time"
-
 	"github.com/paleotronic/diskm8/panic"
 )
 

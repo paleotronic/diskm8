@@ -1,21 +1,16 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/gob"
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"runtime"
-	"time"
-
-	"crypto/md5"
-	"encoding/hex"
-
 	"os"
-
-	"strings"
-
-	"encoding/gob"
-
 	"path/filepath"
+	"runtime"
+	"strings"
+	"time"
 
 	"github.com/paleotronic/diskm8/disk"
 	"github.com/paleotronic/diskm8/loggy"
