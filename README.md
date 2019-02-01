@@ -5,7 +5,7 @@ Download from: https://github.com/paleotronic/diskm8/releases
 Features include:
 
 - Read from ProDOS, DOS 3.X, RDOS and Pascal disk images; 
-- ProDOS or DOS ordered; 2MG and NIB; 113-800K
+- ProDOS or DOS ordered; DSK, PO, 2MG and NIB; 113-800K
 - Write to Prodos and DOS 3.3 disk images;
 - Extract and convert binary, text and detokenize BASIC files (Integer and Applesoft);
 - Write binary, text and retokenized BASIC (Applesoft) files back to disk images;
