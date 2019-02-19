@@ -2,16 +2,14 @@ package disk
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"strings"
-
-	"crypto/sha256"
-	"encoding/hex"
-
-	"fmt"
 )
 
 //import "math/rand"

@@ -1172,11 +1172,13 @@ func (d *DSKWrapper) PRODOS800ChecksumBlock(b int) string {
 
 func (d *DSKWrapper) PRODOSGetBlockSectors(block int) (int, int, int) {
 
-	track := block / PRODOS_BLOCKS_PER_TRACK
+	bpt := d.Format.USPT() / 2
 
-	bo := block % PRODOS_BLOCKS_PER_TRACK
+	track := block / bpt
 
-	if d.Layout == SectorOrderProDOSLinear {
+	bo := block % bpt
+
+	if d.Layout == SectorOrderProDOSLinear || len(d.Data) >= PRODOS_800KB_DISK_BYTES {
 		return track, bo * 2, bo*2 + 1
 	}
 
@@ -1583,6 +1585,8 @@ func (fd *ProDOSFileDescriptor) Publish(dsk *DSKWrapper) error {
 }
 
 func (dsk *DSKWrapper) PRODOSWrite(b int, data []byte) error {
+
+	//log.Printf("====> Request to write block %.4x", b)
 
 	for len(data) < 512 {
 		data = append(data, 0x00)
