@@ -83,7 +83,7 @@ Command-line flags:
   -csv
     	Output data to CSV format
   -datastore string
-    	Database of disk fingerprints for checking (default "/home/april/DiskM8/fingerprints")
+    	Database of disk fingerprints for checking (default "/home/myname/DiskM8/fingerprints")
   -dir
     	Directory specified disk (needs -disk)
   -dir-create string
