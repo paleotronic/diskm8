@@ -36,7 +36,7 @@ func Get(id int) *Logger {
 func NewLogger(id int, app string) *Logger {
 
 	if app == "" {
-		app = "dskalyzer"
+		app = "diskm8"
 	}
 
 	filename := fmt.Sprintf("%s_%d_%s.log", app, id, fts())
