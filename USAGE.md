@@ -1,32 +1,32 @@
 ## Usage examples
 
-Ingest your disk collection, so dskalyzer can report on them:
+Ingest your disk collection, so diskm8 can report on them:
 
 ```
-dskalyzer -ingest C:\Users\myname\LotsOfDisks
+diskm8 -ingest C:\Users\myname\LotsOfDisks
 ```
 
 Find Whole Disk duplicates:
 
 ```
-dskalyzer -whole-dupes 
+diskm8 -whole-dupes 
 ```
 
 Find Active Sectors duplicates (inactive sectors can be different):
 
 ```
-dskalyzer -as-dupes
+diskm8 -as-dupes
 ```
 
 Find Duplicate files across disks:
 
 ```
-dskalyzer -file-dupes
+diskm8 -file-dupes
 ```
 
 Find Active Sector duplicates but only under a folder:
 
 ```
-dskalyzer -as-dupes -select "C:\Users\myname\LotsOfDisks\Operating Systems"
+diskm8 -as-dupes -select "C:\Users\myname\LotsOfDisks\Operating Systems"
 ```
 
