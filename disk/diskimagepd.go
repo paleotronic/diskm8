@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"fmt"
 )
 
 type VDH struct {
@@ -260,6 +261,28 @@ func (dsk *DSKWrapper) IsProDOS() (bool, DiskFormat, SectorOrder) {
 
 			if vdh.GetTotalBlocks() == 1600 && vdh.GetStorageType() == 0xf {
 				return true, GetDiskFormat(DF_PRODOS_800KB), l
+			}
+
+		}
+
+	} else {
+
+		fmt.Println("Trying alternative format identification")
+
+		layouts := []SectorOrder{SectorOrderDOS33, SectorOrderDOS33Alt, SectorOrderProDOS, SectorOrderProDOSLinear}
+
+		for _, l := range layouts {
+
+			dsk.Layout = l
+			vdh, err := dsk.PRODOSGetVDH(2)
+			if err != nil {
+				return false, oldFormat, oldLayout
+			}
+
+			fmt.Printf("Blocks = %d, Size/512 = %d, Storage Type = %d\n", vdh.GetTotalBlocks(), len(dsk.Data)/512, vdh.GetStorageType())
+
+			if vdh.GetStorageType() == 0xf && vdh.GetTotalBlocks() == len(dsk.Data)/512 {
+				return true, GetDiskFormat(DF_PRODOS_CUSTOM), l
 			}
 
 		}
@@ -834,6 +857,15 @@ func (fd *ProDOSFileDescriptor) HeaderPointer() int {
 
 func (d *DSKWrapper) PRODOS800GetBlock(block int) ([]byte, error) {
 
+	if len(d.Data) > 819200 {
+		maxblocks := len(d.Data) / 512
+		if block < maxblocks {
+			offset := 512 * block
+			return d.Data[offset : offset+512], nil
+		}
+		return nil, errors.New("Invalid block")
+	}
+
 	t, s1, s2 := d.PRODOS800GetBlockSectors(block)
 
 	e := d.Seek(t, s1)
@@ -977,9 +1009,13 @@ func (d *DSKWrapper) PRODOSGetCatalog(startblock int, pattern string) (*VDH, []P
 	var e error
 	var vtoc *VDH
 
-	if d.Format.ID == DF_PRODOS_800KB {
+	fmt.Printf("FormatID = %s", d.Format.String())
+
+	if d.Format.ID == DF_PRODOS_800KB || d.Format.ID == DF_PRODOS_CUSTOM {
+		fmt.Println("HC VDH")
 		vtoc, e = d.PRODOS800GetVDH(startblock)
 	} else {
+		fmt.Println("LC VDH")
 		vtoc, e = d.PRODOSGetVDH(startblock)
 	}
 	if e != nil {
@@ -993,7 +1029,7 @@ func (d *DSKWrapper) PRODOSGetCatalog(startblock int, pattern string) (*VDH, []P
 	refnum := startblock
 
 	var data []byte
-	if d.Format.ID == DF_PRODOS_800KB {
+	if d.Format.ID == DF_PRODOS_800KB || d.Format.ID == DF_PRODOS_CUSTOM {
 		data, _ = d.PRODOS800GetBlock(refnum)
 	} else {
 		data, _ = d.PRODOSGetBlock(refnum)
@@ -1001,7 +1037,7 @@ func (d *DSKWrapper) PRODOSGetCatalog(startblock int, pattern string) (*VDH, []P
 
 	nextblock := int(data[2]) + 256*int(data[3])
 
-	//fmt.Printf("ActiveCount = %d\n", filecount)
+	fmt.Printf("ActiveCount = %d\n", filecount)
 
 	entrypointer := 4 + PRODOS_ENTRY_SIZE
 
@@ -1017,7 +1053,7 @@ func (d *DSKWrapper) PRODOSGetCatalog(startblock int, pattern string) (*VDH, []P
 
 				var skipname bool = false
 				if re != nil {
-					//fmt.Printf("Checking [%s] against regex /%s/\n", fd.Name(), patterntmp)
+					fmt.Printf("Checking [%s] against regex /%s/\n", fd.Name(), patterntmp)
 					skipname = !re.MatchString(fd.Name())
 				}
 
@@ -1033,7 +1069,7 @@ func (d *DSKWrapper) PRODOSGetCatalog(startblock int, pattern string) (*VDH, []P
 		if activeentries < filecount {
 			if blockentries == entriesperblock {
 				refnum = nextblock
-				if d.Format.ID == DF_PRODOS_800KB {
+				if d.Format.ID == DF_PRODOS_800KB || d.Format.ID == DF_PRODOS_CUSTOM {
 					data, err = d.PRODOS800GetBlock(refnum)
 				} else {
 					data, err = d.PRODOSGetBlock(refnum)
@@ -1063,7 +1099,7 @@ func (d *DSKWrapper) PRODOSReadFileSectors(fd ProDOSFileDescriptor, maxblocks in
 	switch fd.GetStorageType() {
 	case StorageType_Seedling:
 		/* single block pointed to */
-		if d.Format.ID == DF_PRODOS_800KB {
+		if d.Format.ID == DF_PRODOS_800KB || d.Format.ID == DF_PRODOS_CUSTOM {
 			data, _ = d.PRODOS800GetBlock(fd.IndexBlock())
 		} else {
 			data, _ = d.PRODOSGetBlock(fd.IndexBlock())
@@ -1074,7 +1110,7 @@ func (d *DSKWrapper) PRODOSReadFileSectors(fd ProDOSFileDescriptor, maxblocks in
 		}
 		return data[:count], e
 	case StorageType_Sapling:
-		if d.Format.ID == DF_PRODOS_800KB {
+		if d.Format.ID == DF_PRODOS_800KB || d.Format.ID == DF_PRODOS_CUSTOM {
 			index, _ = d.PRODOS800GetBlock(fd.IndexBlock())
 		} else {
 			index, _ = d.PRODOSGetBlock(fd.IndexBlock())
