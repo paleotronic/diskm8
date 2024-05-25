@@ -120,6 +120,14 @@ var ApplesoftTokens = map[int]string{
 	0xEA: "MID$",
 }
 
+var ASPartials = map[string]bool{
+	"COLOR":  true,
+	"HCOLOR": true,
+	"SPEED":  true,
+	"SCALE":  true,
+	"-": true,
+}
+
 var ApplesoftReverse map[string]int
 var IntegerReverse map[string]int
 
@@ -128,6 +136,9 @@ func init() {
 	IntegerReverse = make(map[string]int)
 	for k, v := range ApplesoftTokens {
 		ApplesoftReverse[v] = k
+		if v == "PRINT" {
+			ApplesoftReverse["?"] = k
+		}
 	}
 	for k, v := range IntegerTokens {
 		IntegerReverse[v] = k
@@ -334,6 +345,8 @@ func ApplesoftDetoks(data []byte) []byte {
 			break
 		}
 
+		// var lineStart = len(out)
+
 		nextAddr = Read16(&srcptr, &length, data)
 
 		if nextAddr == 0 {
@@ -349,7 +362,7 @@ func ApplesoftDetoks(data []byte) []byte {
 		lineNum = Read16(&srcptr, &length, data)
 		ln := fmt.Sprintf("%d", lineNum)
 
-		out = append(out, []byte(" "+ln+" ")...)
+		out = append(out, []byte(ln+" ")...)
 
 		if length == 0 {
 			break
@@ -393,7 +406,9 @@ func ApplesoftDetoks(data []byte) []byte {
 			t = Read8(&srcptr, &length, data)
 		}
 
-		out = append(out, []byte("\r\n")...)
+		out = append(out, []byte("\n")...)
+
+		// log.Printf("Line bytes: %+v", out[lineStart:])
 
 		inQuote, inRem = false, false
 
@@ -427,6 +442,8 @@ func IntegerDetoks(data []byte) []byte {
 		var lineNum int
 		var trailingSpace bool
 		var newTrailingSpace bool = false
+
+		// var lineStart = len(out)
 
 		// read the line length
 		lineLen = Read8(&srcptr, &length, data)
@@ -548,7 +565,7 @@ func ApplesoftTokenize(lines []string) []byte {
 
 	for _, l := range lines {
 
-		l = strings.Trim(l, "\r")
+		l = strings.Trim(l, " \r\n\t")
 		if l == "" {
 			continue
 		}
@@ -556,8 +573,16 @@ func ApplesoftTokenize(lines []string) []byte {
 		chunk := ""
 		inqq := false
 		tmp := strings.SplitN(l, " ", 2)
-		ln, _ := strconv.Atoi(tmp[0])
-		rest := strings.Trim(tmp[1], " ")
+		var rest string
+		var ln int
+		if len(tmp) == 1 {
+			ln = 0
+			rest = ""
+		} else {
+			ln, _ = strconv.Atoi(tmp[0])
+			rest = strings.Trim(tmp[1], " ")
+		}
+		// lastIsTok := false
 
 		linebuffer := make([]byte, 4)
 
@@ -567,31 +592,101 @@ func ApplesoftTokenize(lines []string) []byte {
 
 		// PROCESS LINE
 		var lastKeyword string
+		var inREM bool
+		
 		for _, ch := range rest {
 
+			// case for a single character token, not in string
+			if codech, ok := ApplesoftReverse[strings.ToUpper(string(ch))]; ok && !inREM && !inqq {
+
+				// log.Printf("'%s' (%.2x) is a token... (lastKW=%s, chunk=%s)", string(ch), ch, lastKeyword, chunk)
+
+				// 1st - is chunk + string a token?
+				if chunk != "" {
+					code, ok := ApplesoftReverse[strings.ToUpper(chunk+string(ch))]
+					if ok {
+						if strings.ToUpper(chunk+string(ch)) == "REM" || strings.ToUpper(chunk+string(ch)) == "DATA" {
+							inREM = true
+						}
+						linebuffer = append(linebuffer, byte(code))
+						lastKeyword = chunk + string(ch)
+						chunk = ""
+						// lastIsTok = true
+						continue // we absorbed it ... eg. COLOR=
+					} else {
+						// chunk wasn't so treat as a string
+						// log.Printf("output (%s) by itself...", chunk)
+						linebuffer = append(linebuffer, []byte(chunk)...)
+						// lastIsTok = false
+						// lastKeyword = chunk
+						chunk = ""
+					}
+				}
+
+				// just the symbol
+				linebuffer = append(linebuffer, byte(codech))
+				lastKeyword = string(ch)
+				chunk = ""
+				// lastIsTok = true
+				continue
+			}
+
 			switch {
+			case ch < 32 || ch > 127:
+				continue
+			case inREM && ch != ':':
+				chunk += string(ch)
+				continue
+			case inREM && ch == ':':
+				if chunk != "" {
+					linebuffer = append(linebuffer, []byte(chunk)...)
+				}
+				chunk = ""
+				linebuffer = append(linebuffer, byte(ch))
+				inREM = false
+				continue
 			case inqq && ch != '"':
 				linebuffer = append(linebuffer, byte(ch))
 				lastKeyword = ""
+				// lastIsTok = false
 				continue
 			case ch == '"':
 				linebuffer = append(linebuffer, byte(ch))
 				lastKeyword = ""
 				inqq = !inqq
+				// lastIsTok = false
 				continue
-			case !inqq && breakingChar(ch):
+			case !inqq && breakingChar(ch) && !ASPartials[chunk]:
+
+				if chunk != "" {
+					code, ok := ApplesoftReverse[strings.ToUpper(chunk+string(ch))]
+					if ok {
+						linebuffer = append(linebuffer, byte(code))
+						lastKeyword = strings.ToUpper(chunk + string(ch))
+						chunk = ""
+						continue
+					}
+				}
+
 				linebuffer = append(linebuffer, []byte(chunk)...)
 				chunk = ""
-				linebuffer = append(linebuffer, byte(ch))
+				if ch != ' ' {
+					linebuffer = append(linebuffer, byte(ch))
+				}
 				lastKeyword = ""
 				continue
 			}
 
-			chunk += string(ch)
+			if ch != ' ' {
+				chunk += string(ch)
+			}
 
 			if lastKeyword != "" {
 				code, ok := ApplesoftReverse[strings.ToUpper(lastKeyword+chunk)]
 				if ok {
+					if strings.ToUpper(lastKeyword+chunk) == "REM" || strings.ToUpper(lastKeyword+chunk) == "DATA" {
+						inREM = true
+					}
 					linebuffer[len(linebuffer)-1] = byte(code)
 					lastKeyword = lastKeyword + chunk
 					chunk = ""
@@ -601,6 +696,9 @@ func ApplesoftTokenize(lines []string) []byte {
 
 			code, ok := ApplesoftReverse[strings.ToUpper(chunk)]
 			if ok {
+				if strings.ToUpper(lastKeyword+chunk) == "REM" || strings.ToUpper(lastKeyword+chunk) == "DATA" {
+					inREM = true
+				}
 				linebuffer = append(linebuffer, byte(code))
 				lastKeyword = chunk
 				chunk = ""
@@ -609,6 +707,24 @@ func ApplesoftTokenize(lines []string) []byte {
 		if chunk != "" {
 			linebuffer = append(linebuffer, []byte(chunk)...)
 		}
+
+		 //~ for i := 5; i < len(linebuffer)-1; i++ {
+		 	//~ if linebuffer[i] == 0xc9 {
+				//~ log.Printf("Found 0xC9 (-) in linebuffer...")
+		 		//~ // minus token...
+		 		//~ before := rune(linebuffer[i-1])
+		 		//~ after := rune(linebuffer[i+1])
+		 		//~ log.Printf("Before = %s, After = %s", string(before), string(after))
+
+		 		//~ if after == '.' || (after >= '0' && after <= '9') {
+		 			//~ // number part
+		 			//~ if before > 128 || before == ',' || before == 0xD0 {
+		 				//~ log.Printf("changing - token at %d to symbol", i)
+		 				//~ linebuffer[i] = byte('-')
+		 			//~ }
+		 		//~ }
+		 	//~ }
+		 //~ }
 
 		// ENDING ZERO BYTE
 		linebuffer = append(linebuffer, 0x00)
