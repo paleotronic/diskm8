@@ -100,11 +100,11 @@ func main() {
 
 	runtime.GOMAXPROCS(8)
 
-	banner()
-
-	//l.Default.Level = l.LevelCrit
-
 	flag.Parse()
+
+	if *withDisk == "" && *shellBatch == "" {
+		banner()
+	}
 
 	var filterpath []string
 
