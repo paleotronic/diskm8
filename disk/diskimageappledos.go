@@ -257,7 +257,11 @@ func (fd *VTOC) GetTrackOrder() int {
 }
 
 func (fd *VTOC) BytesPerSector() int {
-	return int(fd.Data[0x36]) + 256*int(fd.Data[0x37])
+	size := int(fd.Data[0x36]) + 256*int(fd.Data[0x37])
+	if size < 256 {
+		size = 256
+	}
+	return size
 }
 
 func (fd *VTOC) IsTSFree(t, s int) bool {
