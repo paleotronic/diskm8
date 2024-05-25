@@ -137,7 +137,9 @@ func (pvh *PascalVolumeHeader) GetNameLength() int {
 
 func (pvh *PascalVolumeHeader) GetName() string {
 	l := pvh.GetNameLength()
-	return string(pvh.data[0x07 : 0x07+l])
+	s := strings.Trim(string(pvh.data[0x07:0x07+l]), " ")
+	s += "." + PascalFileType(pvh.GetType()).Ext()
+	return s
 }
 
 func (pvh *PascalVolumeHeader) GetTotalBlocks() int {
@@ -182,7 +184,7 @@ func (pvh *PascalFileEntry) GetNameLength() int {
 
 func (pvh *PascalFileEntry) GetName() string {
 	l := pvh.GetNameLength()
-	return string(pvh.data[0x07 : 0x07+l])
+	return strings.Trim(string(pvh.data[0x07:0x07+l]), "")
 }
 
 func (pvh *PascalFileEntry) GetBytesRemaining() int {
