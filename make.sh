@@ -1,11 +1,9 @@
 #!/bin/bash
 
-ARCHES="darwin-amd64 windows-386 windows-amd64 linux-386 linux-amd64 linux-arm freebsd-arm freebsd-amd64 freebsd-386"
+ARCHES="darwin-amd64 darwin-arm64 windows-386 windows-amd64 windows-arm64 linux-386 linux-amd64 linux-arm freebsd-arm freebsd-amd64 freebsd-386"
 PUBLISH="publish"
 
 mkdir -p "$PUBLISH"
-
-go get github.com/chzyer/readline
 
 exitState=0
 for arch in `echo $ARCHES`; do
