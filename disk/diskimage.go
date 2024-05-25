@@ -189,7 +189,7 @@ func (f DiskFormat) String() string {
 	case DF_RDOS_32:
 		return "SSI RDOS 32 (13/13/Physical)"
 	case DF_RDOS_33:
-		return "SSI RDOS 32 (16/16/PD)"
+		return "SSI RDOS 33 (16/16/PD)"
 	case DF_PRODOS_CUSTOM:
 		return fmt.Sprintf("ProDOS Custom (%d SPT, %d TPD)", f.SPT(), f.TPD())
 	}
