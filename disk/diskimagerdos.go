@@ -74,7 +74,7 @@ func (f RDOSFormat) Spec() *RDOSFormatSpec {
 	switch f {
 	case RDOS_32:
 		return &RDOSFormatSpec{
-			SectorStride:  13,
+			SectorStride:  16,
 			SectorMax:     13,
 			CatalogTrack:  1,
 			CatalogSector: 0,
@@ -84,8 +84,8 @@ func (f RDOSFormat) Spec() *RDOSFormatSpec {
 		return &RDOSFormatSpec{
 			SectorStride:  16,
 			SectorMax:     13,
-			CatalogTrack:  0,
-			CatalogSector: 1,
+			CatalogTrack:  1,
+			CatalogSector: 0,
 			Ordering:      SectorOrderDOS33,
 		}
 	case RDOS_33:
@@ -167,7 +167,7 @@ const (
 
 var RDOSTypeMap = map[RDOSFileType][2]string{
 	FileType_RDOS_Unknown:   [2]string{"UNK", "Unknown"},
-	FileType_RDOS_AppleSoft: [2]string{"APP", "Applesoft Basic Program"},
+	FileType_RDOS_AppleSoft: [2]string{"BAS", "Applesoft Basic Program"},
 	FileType_RDOS_Binary:    [2]string{"BIN", "Binary File"},
 	FileType_RDOS_Text:      [2]string{"TXT", "ASCII Text"},
 }
@@ -228,11 +228,11 @@ func (fd *RDOSFileDescriptor) Name() string {
 	str = strings.TrimRight(str, " ")
 	switch fd.Type() {
 	case FileType_RDOS_AppleSoft:
-		str += ".a"
+		str += ".bas"
 	case FileType_RDOS_Binary:
-		str += ".s"
+		str += ".bin"
 	case FileType_RDOS_Text:
-		str += ".t"
+		str += ".txt"
 	}
 
 	return str
@@ -252,7 +252,7 @@ func (fd *RDOSFileDescriptor) NameUnadorned() string {
 
 	}
 
-	return str
+	return strings.TrimSpace(str)
 
 }
 
