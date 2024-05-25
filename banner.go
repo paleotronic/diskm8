@@ -12,6 +12,6 @@ func banner() {
 	t, _ := base64.StdEncoding.DecodeString(text)
 
 	os.Stderr.WriteString(string(t) + "\r\n")
-	os.Stderr.WriteString("(c) 2015 - 2018 Paleotronic.com\n\n")
+	os.Stderr.WriteString("(c) 2015 - 2024 Paleotronic.com\n\n")
 
 }
