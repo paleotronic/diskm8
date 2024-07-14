@@ -95,10 +95,6 @@ var fileDelete = flag.String("file-delete", "", "File to delete (-with-disk)")
 var fileMkdir = flag.String("dir-create", "", "Directory to create (-with-disk)")
 var fileCatalog = flag.Bool("catalog", false, "List disk contents (-with-disk)")
 var quarantine = flag.Bool("quarantine", false, "Run -as-dupes and -whole-disk in quarantine mode")
-var serve = flag.String("serve", "", "host:port to run diskm8 server on")
-var tlsCert = flag.String("tls-cert", "", "TLS certificate to use for -serve")
-var tlsKey = flag.String("tls-key", "", "TLS key to use for -serve")
-var acceptOrigin = flag.String("accept-origin", "*", "Control origin -serve allows accepting from")
 
 func main() {
 
@@ -108,10 +104,6 @@ func main() {
 
 	if *withDisk == "" && *shellBatch == "" {
 		banner()
-	}
-
-	if *serve != "" {
-		StartService(*serve, *tlsCert, *tlsKey)
 	}
 
 	var filterpath []string
