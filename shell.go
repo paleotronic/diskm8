@@ -864,7 +864,7 @@ func shellCat(args []string) int {
 		if f.Locked {
 			locked = "Y"
 		}
-		fmt.Printf("%-33s  %6d  %2s  %-23s  %s\n", f.Filename, (f.Size/bs)+1, locked, f.Type, add)
+		fmt.Printf("%-33s  %6d  %2s  %-23s %.2x  %s\n", f.Filename, (f.Size/bs)+1, locked, f.Type, f.Type, add)
 	}
 
 	free := 0

@@ -100,7 +100,7 @@ func (fd *FileDescriptor) Publish(dsk *DSKWrapper) error {
 }
 
 func (fd *FileDescriptor) IsUnused() bool {
-	return fd.Data[0] == 0xff || fd.Type().String() == "Unknown" || fd.TotalSectors() == 0
+	return fd.Data[0] == 0xff || fd.Data[0] == 0x00 || fd.Type().String() == "Unknown" || fd.TotalSectors() == 0
 }
 
 func (fd *FileDescriptor) GetTrackSectorListStart() (int, int) {
@@ -817,6 +817,7 @@ func (d *DSKWrapper) AppleDOSNextFreeCatalogEntry(name string) (*FileDescriptor,
 	data := d.Read()
 
 	for e == nil && count < 105 {
+		fmt.Printf("AppleDOSNextFreeCatalogEntry: checking entry %d\n", count)
 		slot := count % 7
 		pos := 0x0b + 35*slot
 
@@ -824,8 +825,10 @@ func (d *DSKWrapper) AppleDOSNextFreeCatalogEntry(name string) (*FileDescriptor,
 		fd.SetData(data[pos:pos+35], ct, cs, pos)
 
 		if fd.IsUnused() {
+		    fmt.Printf("Is unused\n")
 			return &fd, nil
 		} else if name != "" && strings.ToLower(fd.NameUnadorned()) == strings.ToLower(name) {
+			fmt.Printf("Name match found\n")
 			return &fd, nil
 		}
 		count++
@@ -909,14 +912,14 @@ func (dsk *DSKWrapper) AppleDOSWriteFile(name string, kind FileType, data []byte
 
 	fmt.Printf("Writing file with type %s\n", kind.Ext())
 
-	if kind == FileTypeBIN {
+	if kind & FileTypeBIN != 0 {
 		l := len(data)
 		fmt.Printf("Length is %d\n", l)
 		header := []byte{byte(l % 256), byte(l / 256)}
 		data = append(header, data...)
 	}
 
-	if kind != FileTypeTXT {
+	if kind & FileTypeTXT == 0 {
 		header := []byte{byte(loadAddr % 256), byte(loadAddr / 256)}
 		data = append(header, data...)
 	}
@@ -952,8 +955,8 @@ func (dsk *DSKWrapper) AppleDOSWriteFile(name string, kind FileType, data []byte
 	}
 
 	// 2nd: check we can get a free catalog entry
-	sectorCount := len(dataBlocks)
-
+	sectorCount := len(dataBlocks) + len(tsBlocks)
+	
 	// 3rd: Write the datablocks
 	var block int = 0
 	for len(data) > 0 {
@@ -1033,6 +1036,8 @@ func (dsk *DSKWrapper) AppleDOSWriteFile(name string, kind FileType, data []byte
 	fd.SetType(kind)
 	fd.SetTotalSectors(sectorCount)
 	fd.Publish(dsk)
+
+	fmt.Printf("Added file %s (kind %d)\n", name, kind)
 
 	return nil
 
