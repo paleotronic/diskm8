@@ -2,6 +2,13 @@ DiskM8 is a cross-platform command-line tool for manipulating and managing Apple
 
 Download from: https://github.com/paleotronic/diskm8/releases
 
+How to build:
+
+- Clone the GitHub source (git clone https://github.com/paleotronic/diskm8.git)
+- Execute the make.sh shell script (./make.sh)
+- After completion, the Linux (diskm8) and Windows (dism8.exe) version will be located under the diskm8 root folder
+- All other binaries are packed into zip files and relocated to diskm8/publish folder.
+
 Features include:
 
 - Read from ProDOS, DOS 3.X, RDOS and Pascal disk images; 
