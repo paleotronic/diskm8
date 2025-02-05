@@ -40,12 +40,22 @@ with %d bytes size.
 }
 
 func binpath() string {
-
 	if runtime.GOOS == "windows" {
 		return os.Getenv("USERPROFILE") + "/DiskM8"
 	}
-	return os.Getenv("HOME") + "/DiskM8"
 
+	var xdgData string
+	if os.Getenv("XDG_DATA_HOME") != "" {
+		xdgData = os.Getenv("XDG_DATA_HOME")
+	} else {
+		xdgData = os.Getenv("HOME") + "/.local/share"
+	}
+
+	if _, err := os.Stat(os.Getenv("HOME") + "/DiskM8"); os.IsNotExist(err) {
+		return xdgData + "/DiskM8"
+	} else {
+		return os.Getenv("HOME") + "/DiskM8"
+	}
 }
 
 func init() {
